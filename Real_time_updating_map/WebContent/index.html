@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Real Time Updating Map</title>
+
+<!-- Addning Leaflet Style Sheets -->
+<link rel="stylesheet" href="CSS/leaflet.css" />
+
+</head>
+
+<body style="background-color: white;">
+
+	<div id="wrapper" style="background-color: #EBD6EB;">
+		<div id="page-wrapper">
+			Display Settings
+
+			<li>Draw Paths : &nbsp;&nbsp;</a> <input id="drawPath"
+				type="checkbox" name="drawPath">
+				<button type="button" onclick="checkCheckBox();">DRAW</button>
+			</li>
+			<li><a style="text-decoration: none">Clear All Paths :
+					&nbsp;&nbsp;</a>
+				<button type="button" onclick="clearMarkers();">CLEAR</button></li>
+
+			<li>Focuss on a Device : <input id="followID"
+				class="form-control" placeholder="Enter ID"> <input
+				id="followId" type="checkbox" name="drawPath" disabled="disabled">
+
+				<button type="button" onclick="followID(); checkBoxFollow();">Follow</button></li>
+			<li>Reset Map : &nbsp;&nbsp;
+				<button type="button" onclick="resetMap();">Reset</button>
+
+			</li>
+		</div>
+
+	</div>
+
+	<div align="center" style="padding: 0px">
+		<div id="map" style="width: 1100px; height: 600px"></div>
+	</div>
+
+	<h4>Connected Device IDs</h4>
+	<textarea class="form-control" id="idListArea" readonly></textarea>
+	<h4>Output Console</h4>
+
+	<textarea id="messagesTextArea" rows="17" cols="150" readonly></textarea>
+
+	<br>
+
+	<button type="button" onclick="messagesTextArea.value=null;">Clear
+		Console</button>
+
+	<!-- Adding the leaflet JS -->
+	<script src="JS/leaflet.js"></script>
+
+	<script>
+		//Creating a Layers for the markers and Polylines and Creating the Main map
+		var markerLayer = new L.layerGroup();
+		var polylineLayer = new L.layerGroup();
+
+		var mbAttr = 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors, '
+				+ '<a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, '
+				+ 'Imagery © <a href="http://mapbox.com">Mapbox</a>', mbUrl = 'https://{s}.tiles.mapbox.com/v3/{id}/{z}/{x}/{y}.png';
+
+		var grayscale = L.tileLayer(mbUrl, {
+			id : 'examples.map-20v6611k',
+			attribution : mbAttr
+		}), streets = L.tileLayer(mbUrl, {
+			id : 'examples.map-i86knfo3',
+			attribution : mbAttr
+		});
+
+		var map = L.map('map', {
+			center : [ 6.88869, 79.85878 ],
+			zoom : 13,
+			layers : [ streets, markerLayer, polylineLayer ]
+		});
+
+		var baseLayers = {
+			"Grayscale" : grayscale,
+			"Streets" : streets
+		};
+
+		var overlays = {
+			"Marker Layer" : markerLayer,
+			"Path Layer" : polylineLayer
+		};
+
+		L.control.layers(baseLayers, overlays).addTo(map);
+	</script>
+
+	<script type="text/javascript">
+		// This script is to simmulate a dataset to demonstrate 
+		var j = 0;
+		var lat = 6.88869;
+		var lon = 79.85878;
+		var speedflag = "false";
+
+		function myLoop() {
+			setTimeout(function() {
+
+				lat = lat + 0.0001;
+				lon = lon + 0.0001;
+
+				lat2 = lat + 0.0001;
+				lon2 = lon + 0.0002;
+
+				var id = Math.floor((Math.random() * 2) + 1);
+
+				mapUpdater("" + id, lat, lon);
+
+				j++;
+				if (j < 1000) {
+					myLoop();
+				}
+			}, 500)
+		}
+
+		myLoop();
+	</script>
+
+	<script type="text/javascript">
+		//Marker Icon List Class
+		var markers = L.Icon.extend({
+			options : {
+				shadowUrl : 'images/marker-shadow.png',
+
+				iconSize : [ 41, 41 ],
+				shadowSize : [ 41, 41 ],
+				iconAnchor : [ 20, 40 ],
+				shadowAnchor : [ 10, 40 ],
+				popupAnchor : [ 0, -30 ]
+			}
+		});
+
+		var defIcon = L.Icon.Default.extend({
+			options : {
+				iconUrl : 'images/marker-icon.png'
+			}
+		});
+	</script>
+
+	<script type="text/javascript">
+		//Main Map Related Scripts
+		var idList = [];
+
+		function checkCheckBox() {
+
+			var check = document.getElementById("drawPath");
+			if (check.checked == true) {
+				check.checked = false;
+			} else {
+				check.checked = true;
+			}
+		}
+
+		function mapUpdater(id, lat, lon) {
+
+			var proxi = true;
+			var len = null;
+			var poly = null;
+			var mark = null;
+
+			//If the list doesn't contain anything Adding The Markers and PolyLines
+			if (idList.length == 0) {
+
+				mark = L.marker([ lat, lon ]).bindPopup("Vehicle ID : " + id, {
+					autoPan : false
+				});
+				markerLayer.addLayer(mark);
+				poly = L.polyline([], {
+					color : 'green'
+				});
+				polylineLayer.addLayer(poly).addTo(map);
+
+				idList.push([ id, mark, poly, false ]);
+
+				idListArea.value += id + ", ";
+				return;
+			}
+
+			for (var i = idList.length; i > 0; i--) {
+
+				if (id == idList[i - 1][0]) {
+					len = i - 1;
+					break;
+				}
+				// If the ID is not in the list initiate new entry
+				else if ((i - 1) == 0) {
+
+					mark = L.marker([ lat, lon ]).bindPopup(
+							"Vehicle ID : " + id, {
+								autoPan : false
+							});
+					markerLayer.addLayer(mark);
+					poly = L.polyline([], {
+						color : 'green'
+					});
+					polylineLayer.addLayer(poly).addTo(map);
+					len = idList.length - 1;
+
+					idList.push([ id, mark, poly, false ]);
+					idListArea.value += id + ", ";
+					return;
+				}
+			}
+
+			if (idList[len][3] == true) {
+				idList[i - 1][2].addLatLng([ lat, lon ]);
+				poly = L.polyline([], {
+					color : 'Green'
+				});
+				polylineLayer.addLayer(poly).addTo(map);
+				idList[len][2] = poly;
+				idList[len][3] = false;
+			}
+
+			idList[len][1].setLatLng([ lat, lon ]).update(); // updating the marker
+
+			// Drawing the Path if the check box is checked
+			if (document.getElementById('drawPath').checked) {
+				idList[len][2].addLatLng([ lat, lon ]); // updating the poly-line
+			}
+
+			// Maintaining the focus on a selected device
+			if (document.getElementById("followId").checked
+					&& document.getElementById("followID").value == id) {
+				map.panTo([ lat, lon ], {
+					duration : 0.5
+				});
+			}
+
+			//Updating the Output Console
+			messagesTextArea.value += "ID : " + id + " Longtitute : " + lon
+					+ " Latitude : " + lat + "\n";
+			var textarea = document.getElementById('messagesTextArea');
+			textarea.scrollTop = textarea.scrollHeight;
+
+		}
+
+		// Function too Clear all the markers from the map
+		function clearMarkers() {
+
+			polylineLayer.clearLayers();
+
+			for (var i = idList.length; i > 0; i--) { // Re adding the polylines since clear Layers remove all the objects
+				poly = L.polyline([], {
+					color : 'green'
+				});
+				polylineLayer.addLayer(poly).addTo(map);
+				idList[i - 1][2] = poly;
+			}
+		}
+
+		//Function to maintain focuss on a device
+		function followID() {
+			var id = document.getElementById("followID").value;
+			if (id != "") {
+				for (var i = idList.length; i > 0; i--) {
+					if (idList[i - 1][0] == id) {
+						idList[i - 1][1].openPopup();
+						break;
+					}
+				}
+			}
+		}
+
+		//toggling the check box
+		function checkBoxFollow() {
+			var fid = document.getElementById("followID").value;
+			var checkbox = document.getElementById("followId");
+
+			if (fid != "") {
+
+				if (checkbox.checked) {
+					checkbox.checked = false;
+				} else {
+					checkbox.checked = true;
+				}
+			}
+		}
+
+		// Function to Reset the Map
+		function resetMap() {
+			polylineLayer.clearLayers();
+			markerLayer.clearLayers();
+			idList.length = 0;
+			idListArea.value = "";
+		}
+	</script>
+</body>
+</html>

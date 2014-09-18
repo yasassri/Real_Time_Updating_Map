@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project-modules id="moduleCoreId" project-version="1.5.0">
+    <wb-module deploy-name="Real_time_updating_map">
+        <wb-resource deploy-path="/" source-path="/WebContent"/>
+        <property name="context-root" value="Real_time_updating_map"/>
+    </wb-module>
+</project-modules>
